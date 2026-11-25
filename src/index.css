@@ -82,15 +82,8 @@ html {
   background: rgb(245 158 11);
 }
 
-/* Ocultar el badge flotante de Bolt */
-#bolt-badge,
-[class*="bolt-"],
-[id*="bolt-"],
-a[href*="bolt.new"] {
-  display: none !important;
-}
-
-div:has(a[href*="bolt.new"]) {
+/* Bolt injects the badge into a shadow root hosted outside the React root. */
+body > div:not(#root)[style*="2147483647"] {
   display: none !important;
 }
 /* Contorno luminoso en tarjeta seleccionada */
