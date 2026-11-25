@@ -34,7 +34,7 @@ Plataforma de audio y contenido espiritual construida con React, Vite, Supabase 
 | Gráficas | Recharts |
 | Drag & Drop | @hello-pangea/dd |
 | PWA | vite-plugin-pwa + Workbox |
-| Despliegue | Cloudflare Pages (GitHub Actions) |
+| Despliegue | Cloudflare Workers (GitHub Actions) |
 
 ## Arquitectura del proyecto
 
@@ -62,11 +62,10 @@ La app habla directamente con Supabase desde el navegador usando la `anon key`. 
 ```
 sanctify/
 ├── .github/workflows/
-│   └── deploy.yml              # Pipeline de GitHub Actions para Cloudflare Pages
+│   └── deploy.yml              # Validación y despliegue a Cloudflare Workers
 ├── public/
 │   ├── Sanctify_Icon_black.png
 │   ├── Sanctify_Icon_white.png
-│   ├── _redirects             # SPA fallback para Cloudflare Pages
 │   └── manifest.json
 ├── src/
 │   ├── main.tsx                # Punto de entrada + registro del service worker PWA
@@ -194,22 +193,7 @@ La app usa `vite-plugin-pwa` con Workbox:
 
 ## Variables de entorno
 
-Crea un archivo `.env` en la raíz del proyecto:
-
-```env
-# Supabase
-VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
-VITE_SUPABASE_ANON_KEY=tu-anon-key
-
-# Cloudflare R2
-VITE_R2_ENDPOINT=https://tu-cuenta.r2.cloudflarestorage.com
-VITE_R2_ACCESS_KEY_ID=tu-access-key
-VITE_R2_SECRET_ACCESS_KEY=tu-secret-key
-VITE_R2_BUCKET_NAME=sanctify
-VITE_R2_PUBLIC_URL=https://pub-tu-dominio.r2.dev
-```
-
-Para el despliegue en Cloudflare Pages, configura los mismos valores como secrets en GitHub (`Settings > Secrets and variables > Actions`).
+La app no necesita variables de entorno para compilarse. No añadas credenciales privadas de R2 a variables `VITE_*`: Vite las incrusta en el JavaScript que recibe cualquier visitante. La configuración actual de la subida desde navegador debe migrarse a un endpoint de servidor/Worker antes de habilitar credenciales de R2.
 
 ## Instalación local
 
@@ -284,50 +268,20 @@ npm run dev
 
 ## Despliegue con GitHub Actions
 
+El archivo `.github/workflows/deploy.yml` valida cada Pull Request y publica la app en Cloudflare Workers al hacer push a `main`. Wrangler sirve `dist/` como SPA con el nombre `sanctify-pwa`, que corresponde a `https://sanctify-pwa.diego-soriano932.workers.dev`.
+
 ### Configuración inicial
 
-1. **En Cloudflare:**
-   - Crea un proyecto de Pages llamado `sanctify`.
-   - Obtén tu **Account ID** (Dashboard > Workers & Pages).
-   - Crea un **API Token** con permisos de Pages (Account > Cloudflare Pages > Edit).
+1. En Cloudflare, obtén el **Account ID** desde **Workers & Pages** y crea un API Token con permisos para editar Workers.
+2. En GitHub, añade `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en **Settings > Secrets and variables > Actions**.
+3. Confirma que el subdominio `diego-soriano932.workers.dev` está habilitado en esa cuenta y que el Worker `sanctify-pwa` puede desplegarse allí.
+4. Añade `https://sanctify-pwa.diego-soriano932.workers.dev` a las URLs permitidas de redirección de autenticación en Supabase.
 
-2. **En GitHub (Settings > Secrets and variables > Actions):**
+Los Pull Requests ejecutan typecheck, pruebas y build sin desplegar. Los cambios en `main` hacen esas mismas verificaciones y, si pasan, despliegan a `workers.dev`. También se puede ejecutar `npm run deploy` localmente después de autenticar Wrangler con Cloudflare.
 
-   | Secret | Valor |
-   |--------|-------|
-   | `CLOUDFLARE_API_TOKEN` | Token de Cloudflare |
-   | `CLOUDFLARE_ACCOUNT_ID` | Tu Account ID |
-   | `VITE_SUPABASE_URL` | URL de Supabase |
-   | `VITE_SUPABASE_ANON_KEY` | Anon key de Supabase |
-   | `VITE_R2_ENDPOINT` | Endpoint de R2 |
-   | `VITE_R2_ACCESS_KEY_ID` | Access key de R2 |
-   | `VITE_R2_SECRET_ACCESS_KEY` | Secret key de R2 |
-   | `VITE_R2_BUCKET_NAME` | Nombre del bucket |
-   | `VITE_R2_PUBLIC_URL` | URL pública de R2 |
+### Credenciales de R2
 
-### Flujo del pipeline
-
-El archivo `.github/workflows/deploy.yml` se ejecuta en cada push a `main` y en cada Pull Request:
-
-1. **Checkout** del código.
-2. **Setup Node.js 20** con caché de npm.
-3. **`npm ci`** instala dependencias desde el lockfile.
-4. **`npm run typecheck`** verifica tipos (falla el pipeline si hay errores).
-5. **`npm run lint`** ejecuta ESLint (no bloqueante).
-6. **`npm run build`** compila la app con las variables de entorno inyectadas.
-7. **`wrangler pages deploy`** publica `dist/` en Cloudflare Pages.
-
-El despliegue a producción ocurre solo en pushes a `main`. Los Pull Requests ejecutan el pipeline hasta el build pero no despliegan.
-
-### SPA routing en Cloudflare Pages
-
-El archivo `public/_redirects` contiene:
-
-```
-/*    /index.html   200
-```
-
-Esto asegura que todas las rutas sirvan el SPA sin errores 404.
+El pipeline no inyecta claves de R2 en el build. Las variables `VITE_*` se incluyen en el JavaScript público del navegador; por tanto, no configures `VITE_R2_ACCESS_KEY_ID` ni `VITE_R2_SECRET_ACCESS_KEY` como secretos de compilación. La subida directa a R2 requiere mover esa operación a un endpoint de servidor/Worker antes de usar credenciales privadas.
 
 ## Licencia
 

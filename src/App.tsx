@@ -2057,7 +2057,7 @@ export default function App() {
       <ReminderProvider>
         <AudioProvider queue={combinedTracks} session={session}>
           {!session ? (
-            <LandingPage onEnterApp={() => {}} />
+            <LandingPage />
           ) : (
             <AppLayout catalogLoading={loading} session={session} onLogout={handleLogout} />
           )}

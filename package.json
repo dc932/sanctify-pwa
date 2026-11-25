@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
@@ -45,6 +46,7 @@
     "vite": "^6.0.0",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^2.1.9",
-    "workbox-range-requests": "^7.4.1"
+    "workbox-range-requests": "^7.4.1",
+    "wrangler": "^4.168.0"
   }
 }

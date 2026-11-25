@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { supabase } from '../supabase';
 import {
+  ArrowLeft,
   ArrowRight,
   BookOpen,
   Check,
@@ -24,10 +25,6 @@ import {
   Youtube,
 } from 'lucide-react';
 
-interface LandingPageProps {
-  onEnterApp: () => void;
-}
-
 interface Review {
   id: string;
   name: string;
@@ -37,7 +34,53 @@ interface Review {
   created_at: string;
 }
 
-const SHARE_URL = 'https://sanctify-catholic-st-y388.bolt.host';
+type LegalPageType = 'privacy' | 'terms';
+
+const legalPages: Record<
+  LegalPageType,
+  { title: string; introduction: string; sections: { title: string; body: string }[] }
+> = {
+  privacy: {
+    title: 'Política de privacidad',
+    introduction:
+      'Esta página resume de forma general cómo Sanctify utiliza la información necesaria para ofrecer sus funciones.',
+    sections: [
+      {
+        title: 'Información que se utiliza',
+        body: 'Puede incluir los datos de cuenta y perfil que proporcionas, el contenido que publicas y tus preferencias, favoritos, listas y reseñas.',
+      },
+      {
+        title: 'Uso y almacenamiento',
+        body: 'La información se utiliza para autenticar tu cuenta, ofrecer las funciones de Sanctify y guardar tus preferencias. La plataforma utiliza Supabase para autenticación y datos, y Cloudflare R2 para almacenar archivos publicados.',
+      },
+      {
+        title: 'Consultas sobre tus datos',
+        body: 'Para consultas o solicitudes relacionadas con tus datos, escribe a hola@sanctify.app.',
+      },
+    ],
+  },
+  terms: {
+    title: 'Términos de uso',
+    introduction:
+      'Al utilizar Sanctify, aceptas usar la plataforma de forma responsable y respetar los derechos de otras personas.',
+    sections: [
+      {
+        title: 'Uso de la plataforma',
+        body: 'No uses Sanctify para actividades ilegales, interferir con el servicio o afectar las cuentas de otras personas.',
+      },
+      {
+        title: 'Contenido publicado',
+        body: 'Al publicar contenido, confirmas que tienes autorización para compartirlo y que no infringe derechos de terceros. Eres responsable del material que envías.',
+      },
+      {
+        title: 'Disponibilidad y contacto',
+        body: 'Las funciones pueden cambiar o quedar temporalmente fuera de servicio. Si tienes preguntas sobre estos términos, escribe a hola@sanctify.app.',
+      },
+    ],
+  },
+};
+
+const SHARE_URL = 'https://sanctify-pwa.diego-soriano932.workers.dev';
 
 const features = [
   { icon: Headphones, title: 'Audio espiritual', description: 'Música, oración guiada y podcasts para acompañar tu día.' },
@@ -63,10 +106,58 @@ function Stars({ count = 5 }: { count?: number }) {
   );
 }
 
-export default function LandingPage({ onEnterApp }: LandingPageProps) {
+function LegalInfoPage({
+  page,
+  onBack,
+}: {
+  page: LegalPageType;
+  onBack: () => void;
+}) {
+  const content = legalPages[page];
+
+  return (
+    <main className="min-h-screen bg-[#0A0A0B] px-4 pb-16 pt-24 text-white sm:px-6">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center gap-4 border-b border-white/[0.06] bg-[#0A0A0B]/95 px-4 backdrop-blur-xl sm:px-6">
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm font-semibold text-zinc-300 hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver
+        </button>
+        <span className="font-bold">Sanctify</span>
+      </header>
+
+      <article className="mx-auto max-w-3xl">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#3CC8F5]">
+          Información general
+        </p>
+        <h1 className="mt-3 text-3xl font-bold">{content.title}</h1>
+        <p className="mt-5 leading-7 text-zinc-300">{content.introduction}</p>
+        <div className="mt-8 space-y-7">
+          {content.sections.map((section) => (
+            <section key={section.title}>
+              <h2 className="text-lg font-semibold">{section.title}</h2>
+              <p className="mt-2 leading-7 text-zinc-400">{section.body}</p>
+            </section>
+          ))}
+        </div>
+        <p className="mt-10 border-t border-zinc-800 pt-5 text-xs leading-5 text-zinc-500">
+          Esta información es general y debe revisarse para reflejar las prácticas y requisitos legales
+          aplicables a Sanctify.
+        </p>
+      </article>
+    </main>
+  );
+}
+
+export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [showLogin, setShowLogin] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [legalPage, setLegalPage] = useState<LegalPageType | null>(null);
+  const openLogin = () => setShowLogin(true);
   
   // Estados para el sistema de Reseñas Dinámicas
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
@@ -239,6 +330,10 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
     }
   };
 
+  if (legalPage) {
+    return <LegalInfoPage page={legalPage} onBack={() => setLegalPage(null)} />;
+  }
+
   return (
     <div className="min-h-screen overflow-hidden bg-[#0A0A0B] text-white">
       {/* Header */}
@@ -295,7 +390,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                 Sanctify es gratuito, sin anuncios y creado para crecer contigo.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <button onClick={onEnterApp} className="group flex items-center gap-2 rounded-full bg-[#3CC8F5] px-5 py-3 text-sm font-bold text-black transition-all hover:scale-[1.02] hover:bg-[#edca72] cursor-pointer">
+                <button onClick={openLogin} className="group flex items-center gap-2 rounded-full bg-[#3CC8F5] px-5 py-3 text-sm font-bold text-black transition-all hover:scale-[1.02] hover:bg-[#edca72] cursor-pointer">
                   Explorar Sanctify <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </button>
                 <a href="#contenido" className="flex items-center gap-2 rounded-full border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-900">
@@ -331,14 +426,14 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                               <p className="truncate text-sm font-semibold">{item.title}</p>
                               <p className="mt-1 text-xs text-zinc-500 truncate">{item.category || 'Creador'}</p>
                             </div>
-                            <button onClick={onEnterApp} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3CC8F5] text-black shrink-0 cursor-pointer" aria-label="Reproducir"><Play className="ml-0.5 h-4 w-4" fill="currentColor" /></button>
+                            <button onClick={openLogin} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3CC8F5] text-black shrink-0 cursor-pointer" aria-label="Reproducir"><Play className="ml-0.5 h-4 w-4" fill="currentColor" /></button>
                           </div>
                         ))
                       ) : (
                         <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-3 items-start">
                           <img src="https://images.pexels.com/photos/426976/pexels-photo-426976.jpeg?auto=compress&cs=tinysrgb&w=240" alt="Música espiritual" className="h-14 w-14 rounded-xl object-cover aspect-square" />
                           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">Ave Maria</p><p className="mt-1 text-xs text-zinc-500 truncate">Schola Cantorum</p></div>
-                          <button onClick={onEnterApp} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3CC8F5] text-black cursor-pointer" aria-label="Reproducir"><Play className="ml-0.5 h-4 w-4" fill="currentColor" /></button>
+                          <button onClick={openLogin} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3CC8F5] text-black cursor-pointer" aria-label="Reproducir"><Play className="ml-0.5 h-4 w-4" fill="currentColor" /></button>
                         </div>
                       )}
                     </div>
@@ -365,7 +460,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#3CC8F5]/10 text-[#3CC8F5] transition-colors group-hover:bg-[#3CC8F5] group-hover:text-black"><Icon className="h-5 w-5" /></div>
                   <h3 className="mt-5 font-bold">{title}</h3>
                   <p className="mt-2 text-sm leading-6 text-zinc-500">{description}</p>
-                  <button onClick={onEnterApp} className="mt-4 flex items-center gap-1 text-xs font-bold text-[#3CC8F5] cursor-pointer">Explorar <ChevronRight className="h-3.5 w-3.5" /></button>
+                  <button onClick={openLogin} className="mt-4 flex items-center gap-1 text-xs font-bold text-[#3CC8F5] cursor-pointer">Explorar <ChevronRight className="h-3.5 w-3.5" /></button>
                 </div>
               ))}
             </div>
@@ -483,9 +578,21 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
               <a href="#contenido" className="hover:text-white">Contenido</a>
               <a href="#comunidad" className="hover:text-white">Comunidad</a>
               <a href="#reseñas" className="hover:text-white">Reseñas</a>
-              <button onClick={onEnterApp} className="text-left hover:text-white cursor-pointer">Abrir app</button>
-              <a href="#" className="hover:text-white">Privacidad</a>
-              <a href="#" className="hover:text-white">Términos</a>
+              <button onClick={openLogin} className="text-left hover:text-white cursor-pointer">Abrir app</button>
+              <button
+                type="button"
+                onClick={() => setLegalPage('privacy')}
+                className="text-left hover:text-white"
+              >
+                Privacidad
+              </button>
+              <button
+                type="button"
+                onClick={() => setLegalPage('terms')}
+                className="text-left hover:text-white"
+              >
+                Términos
+              </button>
             </div>
           </div>
           <div className="mt-10 flex flex-col justify-between gap-4 border-t border-zinc-800 pt-5 text-xs text-zinc-600 sm:flex-row">
@@ -502,7 +609,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
       {/* Floating CTA */}
       <div className="fixed bottom-4 left-1/2 z-30 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-2xl border border-[#3CC8F5]/30 bg-[#171719]/95 p-2 pl-4 shadow-2xl shadow-black/60 backdrop-blur-xl sm:bottom-5">
         <span className="text-xs font-semibold text-zinc-200">Empieza tu camino en Sanctify</span>
-        <button onClick={onEnterApp} className="flex items-center gap-1.5 rounded-xl bg-[#3CC8F5] px-3.5 py-2.5 text-xs font-bold text-black cursor-pointer">
+        <button onClick={openLogin} className="flex items-center gap-1.5 rounded-xl bg-[#3CC8F5] px-3.5 py-2.5 text-xs font-bold text-black cursor-pointer">
           Entrar <ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -628,7 +735,25 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
               </button>
             </form>
             
-            <p className="mt-4 text-center text-[11px] text-zinc-600">Al continuar aceptas nuestros términos y política de privacidad.</p>
+            <p className="mt-4 text-center text-[11px] text-zinc-600">
+              Al continuar aceptas nuestros{' '}
+              <button
+                type="button"
+                onClick={() => setLegalPage('terms')}
+                className="underline hover:text-zinc-300"
+              >
+                términos
+              </button>{' '}
+              y{' '}
+              <button
+                type="button"
+                onClick={() => setLegalPage('privacy')}
+                className="underline hover:text-zinc-300"
+              >
+                política de privacidad
+              </button>
+              .
+            </p>
           </div>
         </div>
       )}
