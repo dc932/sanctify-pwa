@@ -272,7 +272,7 @@ export default function LandingPage({ onEnterApp }: LandingPageProps) {
 
               <div className="my-6 w-full max-w-5xl overflow-hidden rounded-3xl border border-zinc-800 bg-[#121214] shadow-2xl">
                 <img
-                  src="/Sanctify_V2_logo_black.png"
+                  src="/Sanctify_V2_Logo_black.png"
                   alt="Sanctify logo"
                   className="h-[400px] sm:h-[500px] lg:h-[600px] w-full object-cover object-center"
                 />
