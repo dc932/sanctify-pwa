@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Folder, ChevronRight, FolderPlus, MoreVertical, ArrowLeft, X, Play, Pause, Music, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { supabase } from '../supabase';
-import { tracks as staticTracks } from '@/data/tracks';
 import { useAudio } from '@/context/AudioContext';
 import type { Track, TrackCategory } from '@/types/audio';
 
@@ -101,8 +100,7 @@ export default function FolderExplorerView({ onClose, session, onOpenPlaylistMod
           duration: 0,
         }));
 
-        const allAvailableTracks = [...staticTracks, ...formattedDynamicTracks];
-        const matchedTracks = allAvailableTracks.filter((t) => trackIds.includes(t.id));
+        const matchedTracks = formattedDynamicTracks.filter((t) => trackIds.includes(t.id));
 
         matchedTracks.sort((a, b) => {
           const posA = positionMap.get(a.id) ?? 0;

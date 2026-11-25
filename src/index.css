@@ -83,9 +83,14 @@ html {
 }
 
 /* Ocultar el badge flotante de Bolt */
+#bolt-badge,
 [class*="bolt-"],
 [id*="bolt-"],
-div:has(> a[href*="bolt.new"]) {
+a[href*="bolt.new"] {
+  display: none !important;
+}
+
+div:has(a[href*="bolt.new"]) {
   display: none !important;
 }
 /* Contorno luminoso en tarjeta seleccionada */

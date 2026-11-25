@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import {
   ArrowLeft,
   BarChart2,
@@ -22,8 +22,6 @@ import EarningsView from './creator/EarningsView';
 import AdminReviewView from './creator/AdminReviewView';
 import AlbumManagerView from './creator/AlbumManagerView';
 import { useCreatorStudioData } from '@/hooks/useCreatorStudioData';
-import { supabase } from '../supabase';
-import { uploadToR2 } from '../r2';
 
 type CreatorView = 'dashboard' | 'upload' | 'albums' | 'library' | 'review' | 'analytics' | 'earnings';
 
@@ -240,81 +238,10 @@ export default function CreatorStudio({
   const [activeView, setActiveView] = useState<CreatorView>('dashboard');
   const [isVerified] = useState<boolean>(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
   const { stats, benefactors, loading, refetch } = useCreatorStudioData(session);
 
   const activeItem = navItems.find((n) => n.key === activeView) ?? navItems[0];
-
-  const handleUploadContent = useCallback(
-    async (formData: {
-      title: string;
-      file: File;
-      artwork?: File;
-      category: string;
-      artist?: string;
-      duration?: number;
-    }) => {
-      if (isUploading) return;
-
-      if (!(formData?.file instanceof Blob)) {
-        alert('Selecciona un archivo válido antes de publicar.');
-        return;
-      }
-
-      if (!formData.title?.trim()) {
-        alert('Ingresa un título para el contenido.');
-        return;
-      }
-
-      setIsUploading(true);
-      try {
-        const fileName = formData.file instanceof File ? formData.file.name : '';
-        const fileExtension = fileName.split('.').pop()?.toLowerCase();
-        const isPdf = fileExtension === 'pdf' || formData.file.type === 'application/pdf';
-
-        const finalCategory = isPdf ? 'blog' : formData.category || 'music';
-        const folder = finalCategory === 'blog' ? 'readings' : 'tracks';
-
-        const fileUrl = await uploadToR2(formData.file, folder);
-        if (!fileUrl) {
-          throw new Error('No se obtuvo la URL pública del archivo en R2.');
-        }
-
-        let artworkUrl: string | null = null;
-        if (formData.artwork instanceof Blob) {
-          artworkUrl = await uploadToR2(formData.artwork, 'artwork');
-        }
-
-        const payload: Record<string, any> = {
-          title: formData.title.trim(),
-          file_url: fileUrl,
-          artwork_url: artworkUrl,
-          category: finalCategory,
-          artist: formData.artist?.trim() || session?.user?.email || 'Creador Sanctify',
-          duration: Number.isFinite(formData.duration) ? formData.duration : 0,
-          status: 'published',
-        };
-
-        if (session?.user?.id) {
-          payload.user_id = session.user.id;
-        }
-
-        const { error: dbError } = await supabase.from('creator_content').insert(payload);
-        if (dbError) throw dbError;
-
-        alert('¡Contenido subido exitosamente a Cloudflare R2 y registrado en Supabase!');
-        await Promise.resolve(refetch());
-        setActiveView('library');
-      } catch (err: any) {
-        console.error('Error al subir el contenido a R2:', err);
-        alert(`Error al publicar: ${err?.message || 'Revisa la consola para más detalles.'}`);
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    [isUploading, refetch, session?.user?.email, session?.user?.id]
-  );
 
   const ActiveIcon = activeItem.icon;
 
@@ -425,7 +352,7 @@ export default function CreatorStudio({
                 refetch={refetch}
               />
             )}
-            {activeView === 'upload' && <UploadView onUpload={handleUploadContent} />}
+            {activeView === 'upload' && <UploadView />}
             {activeView === 'albums' && <AlbumManagerView />}
             {activeView === 'library' && <LibraryView />}
             {activeView === 'review' && <AdminReviewView />}

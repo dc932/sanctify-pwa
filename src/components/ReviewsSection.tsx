@@ -58,7 +58,7 @@ export function ReviewsSection() {
       {/* Grid de Reseñas */}
       {isLoading ? (
         <div className="text-center py-12 text-zinc-500 animate-pulse text-sm">Cargando reseñas...</div>
-      </i> : reviews.length > 0 ? (
+      ) : reviews.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {reviews.map((rev) => (
             <div

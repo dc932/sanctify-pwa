@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Play, Pause, Music, Mic, BookOpen, Video, Flame, Sparkles, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../supabase';
-import { tracks as staticTracks } from '@/data/tracks';
 import { useAudio } from '@/context/AudioContext';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/components/AuthContext';
 import type { Track, TrackCategory } from '@/types/audio';
 import { AlbumDetailView } from '@/components/AlbumDetailView';
 
@@ -67,17 +66,12 @@ export default function CatalogScreen({
           item.artwork_url ||
           'https://images.pexels.com/photos/426976/pexels-photo-426976.jpeg?auto=compress&cs=tinysrgb&w=600',
         audioUrl: item.file_url,
-        file_url: item.file_url,
         category: (item.category as TrackCategory) || 'podcast',
         duration: item.duration || 180,
         lyrics: item.lyrics || item.description,
       }));
 
-      // 2. Combinar con catálogo estático (siempre que estemos en la primera página o en 'all')
-      let allAvailableTracks = [...formattedDynamicTracks];
-      if (pageIndex === 0 && (categoryFilter === 'all' || categoryFilter === 'music')) {
-        allAvailableTracks = [...allAvailableTracks, ...staticTracks];
-      }
+      const allAvailableTracks = formattedDynamicTracks;
 
       // 3. Filtrar según la pestaña activa
       if (categoryFilter === 'all') {

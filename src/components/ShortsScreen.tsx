@@ -4,14 +4,12 @@ import {
   Bookmark,
   Check,
   Heart,
-  MessageCircle,
   MoreHorizontal,
   Share2,
   Volume2,
   VolumeX,
 } from 'lucide-react';
 import { useAudio } from '@/context/AudioContext';
-import { tracks } from '@/data/tracks';
 
 interface ShortItem {
   id: string;
@@ -19,7 +17,6 @@ interface ShortItem {
   author: string;
   description: string;
   likes: number;
-  audioTrackId?: string;
 }
 
 const shorts: ShortItem[] = [
@@ -29,7 +26,6 @@ const shorts: ShortItem[] = [
     author: '@padre_antonio',
     description: 'Dios también habla en los momentos sencillos. Tómate un minuto para escucharle hoy.',
     likes: 12400,
-    audioTrackId: 'pod-1',
   },
   {
     id: 'short-2',
@@ -37,7 +33,6 @@ const shorts: ShortItem[] = [
     author: '@evangelio.diario',
     description: 'Minuto del Evangelio: la esperanza no decepciona cuando caminamos con fe.',
     likes: 8700,
-    audioTrackId: 'blg-2',
   },
   {
     id: 'short-3',
@@ -45,7 +40,6 @@ const shorts: ShortItem[] = [
     author: '@sacerdote_joven',
     description: 'Una oración breve para comenzar tu día con el corazón en paz.',
     likes: 15300,
-    audioTrackId: 'mus-1',
   },
 ];
 
@@ -54,7 +48,7 @@ function formatCount(value: number): string {
 }
 
 export default function ShortsScreen({ onClose }: { onClose: () => void }) {
-  const { isPlaying, pausePlayback, playTrack } = useAudio();
+  const { isPlaying, pausePlayback } = useAudio();
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [activeId, setActiveId] = useState(shorts[0].id);
   const [muted, setMuted] = useState(true);
@@ -108,14 +102,6 @@ export default function ShortsScreen({ onClose }: { onClose: () => void }) {
     }
     setShared(item.id);
     window.setTimeout(() => setShared(null), 1600);
-  };
-
-  const openAudio = (item: ShortItem) => {
-    const track = tracks.find((candidate) => candidate.id === item.audioTrackId);
-    if (track) {
-      playTrack(track);
-      onClose();
-    }
   };
 
   return (
@@ -183,12 +169,6 @@ export default function ShortsScreen({ onClose }: { onClose: () => void }) {
                 <p className="font-semibold text-white">{item.author}</p>
               </div>
               <p className="text-sm leading-6 text-white/90 sm:text-base">{item.description}</p>
-              {item.audioTrackId && (
-                <button onClick={() => openAudio(item)} className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-xs font-bold text-stone-900 transition-transform hover:scale-[1.02] active:scale-95">
-                  <MessageCircle className="h-4 w-4" />
-                  Ver podcast/audio completo
-                </button>
-              )}
             </div>
           </article>
         ))}

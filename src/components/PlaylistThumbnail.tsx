@@ -1,15 +1,15 @@
 import { Music } from 'lucide-react';
-import { tracks } from '@/data/tracks';
 
 interface PlaylistThumbnailProps {
-  trackIds: string[];
+  artworkUrls?: string[];
   sizeClass?: string;
 }
 
-export default function PlaylistThumbnail({ trackIds = [], sizeClass = 'h-24 w-24' }: PlaylistThumbnailProps) {
-  // Obtener las obras/portadas de las pistas guardadas
-  const playlistTracks = tracks.filter((t) => trackIds.includes(t.id));
-  const artworks = playlistTracks.map((t) => t.artworkUrl).filter(Boolean);
+export default function PlaylistThumbnail({
+  artworkUrls = [],
+  sizeClass = 'h-24 w-24',
+}: PlaylistThumbnailProps) {
+  const artworks = artworkUrls.filter(Boolean);
 
   // Si tiene 4 o más canciones, muestra el collage 2x2 estilo Spotify
   if (artworks.length >= 4) {

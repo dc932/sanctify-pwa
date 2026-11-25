@@ -55,7 +55,7 @@ function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlaying: bool
       }
     }
 
-    if (audioCtxRef.current.state === 'suspended' && isPlaying) {
+    if (audioCtxRef.current?.state === 'suspended' && isPlaying) {
       audioCtxRef.current.resume();
     }
   }, [audioElement, isPlaying]);

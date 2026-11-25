@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { supabase } from '../supabase';
-import { tracks as staticTracks } from '@/data/tracks';
 import { useAudio, type AudioContextValue } from '@/context/AudioContext';
 import { useAuth } from './AuthContext';
 import type { Track, TrackCategory } from '@/types/audio';
@@ -141,15 +140,7 @@ function mapSupabaseContentToTracks(rows: any[] | null | undefined): TrackEntry[
     createdAtMs: parseTimestamp(item.created_at || item.date, item.title),
   }));
 
-  const dynamicIds = new Set(dynamicTracks.map((t) => String(t.id)));
-  const fallbackStatic: TrackEntry[] = staticTracks
-    .filter((st) => !dynamicIds.has(String(st.id)))
-    .map((st) => ({
-      ...st,
-      createdAtMs: parseTimestamp((st as any).created_at || (st as any).date, st.title),
-    }));
-
-  return [...dynamicTracks, ...fallbackStatic];
+  return dynamicTracks;
 }
 
 function matchesCategory(rawCat: string | undefined, targetTab: string): boolean {

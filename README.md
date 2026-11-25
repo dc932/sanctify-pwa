@@ -75,7 +75,6 @@ sanctify/
 │   ├── r2.ts                   # Cliente Cloudflare R2 (subida de archivos)
 │   ├── index.css               # Estilos globales + Tailwind
 │   ├── types/audio.ts          # Tipos: Track, TrackCategory, AudioState
-│   ├── data/tracks.ts          # Catálogo de pistas estáticas
 │   ├── lib/
 │   │   └── reminders.ts        # Utilidades de recordatorios (fechas, formato, validación)
 │   ├── context/

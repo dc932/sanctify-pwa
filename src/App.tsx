@@ -36,7 +36,6 @@ import {
 import { AudioProvider, useAudio } from '@/context/AudioContext';
 import { ReminderProvider } from '@/context/ReminderContext';
 import { useTheme } from '@/hooks/useTheme';
-import { tracks as staticTracks } from '@/data/tracks';
 import type { Track, TrackCategory } from '@/types/audio';
 import MiniPlayer from '@/components/MiniPlayer';
 import FullScreenPlayer from '@/components/FullScreenPlayer';
@@ -1331,15 +1330,13 @@ function AppLayout({
   const [fullName, setFullName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [isDarkTheme, setIsDarkTheme] = useState(
-    () => document.documentElement.classList.contains('dark') || true
-  );
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(true);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isApprovedCreator, setIsApprovedCreator] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
-  const { playTrack, isFullScreenOpen, closeFullScreen } = useAudio();
+  const { queue, playTrack, isFullScreenOpen, closeFullScreen } = useAudio();
 
   useEffect(() => {
     if (!session?.user) return;
@@ -1575,7 +1572,7 @@ function AppLayout({
                 onOpenCreatorFlow={handleOpenCreatorFlow}
                 onOpenLectures={() => setActiveView('lecturas')}
                 onOpenPlaylistModal={(track) => setPlaylistTrack(track)}
-                tracks={(window as any).__supabaseTracks || staticTracks}
+                tracks={queue}
                 catalogLoading={catalogLoading}
                 onSelectTrack={handleSelectTrack}
                 isSearchModalOpen={isSearchModalOpen}
@@ -2003,18 +2000,8 @@ function AppLayout({
 export default function App() {
   useTheme();
   const [session, setSession] = useState<any>(null);
-  const [combinedTracks, setCombinedTracks] = useState<Track[]>(staticTracks);
+  const [combinedTracks, setCombinedTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        for (const registration of registrations) {
-          void registration.unregister();
-        }
-      });
-    }
-  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
@@ -2040,24 +2027,16 @@ export default function App() {
 
         if (error) throw error;
 
-        if (data && data.length > 0) {
-          const supabaseTracks: Track[] = data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            artist: item.artist || item.category || 'Creador Sanctify',
-            artworkUrl: item.artwork_url || DEFAULT_ARTWORK,
-            audioUrl: item.file_url,
-            category: (item.category as TrackCategory) || 'music',
-            duration: item.duration ?? 0,
-          }));
-
-          const merged = [
-            ...supabaseTracks,
-            ...staticTracks.filter((st) => !supabaseTracks.some((st2) => st2.id === st.id)),
-          ];
-          setCombinedTracks(merged);
-          (window as any).__supabaseTracks = merged;
-        }
+        const supabaseTracks: Track[] = (data || []).map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          artist: item.artist || item.category || 'Creador Sanctify',
+          artworkUrl: item.artwork_url || DEFAULT_ARTWORK,
+          audioUrl: item.file_url,
+          category: (item.category as TrackCategory) || 'music',
+          duration: item.duration ?? 0,
+        }));
+        setCombinedTracks(supabaseTracks);
       } catch (err) {
         console.error('Error al cargar contenido de Supabase:', err);
       } finally {

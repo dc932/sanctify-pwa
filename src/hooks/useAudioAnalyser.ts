@@ -37,7 +37,7 @@ export function useAudioAnalyser(audioElement: HTMLAudioElement | null, isPlayin
     const audioCtx = audioCtxRef.current;
     if (!audioCtx) return;
 
-    if (isPlaying && audioCtx.state === 'suspended') {
+    if (isPlaying && audioCtx?.state === 'suspended') {
       audioCtx.resume().catch((err) => {
         console.warn('No se pudo reanudar el AudioContext:', err);
       });

@@ -21,7 +21,7 @@ export interface AudioContextValue extends AudioState {
   playbackRate: number;
   volume: number;
   playbackSource: {
-    type: 'playlist' | 'album' | 'category' | 'queue' | 'folder' | 'favorites';
+    type: 'playlist' | 'album' | 'category' | 'catalog' | 'queue' | 'folder' | 'favorites';
     title: string;
   };
   scheduledNextId: string | null;
@@ -223,7 +223,7 @@ export function AudioProvider({
     if (!audio) return;
 
     audio.load();
-    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+    if (audioCtxRef.current?.state === 'suspended') {
       audioCtxRef.current.resume();
     }
 
@@ -282,7 +282,7 @@ export function AudioProvider({
     const onPlay = () => {
       setIsPlaying(true);
       setIsLoadingAudio(false);
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      if (audioCtxRef.current?.state === 'suspended') {
         audioCtxRef.current.resume();
       }
     };
@@ -404,7 +404,7 @@ export function AudioProvider({
     ) => {
       if (!track) return;
 
-      const fileUrl = (track.file_url || track.audio_url || track.url || '').toLowerCase();
+      const fileUrl = (track.audioUrl || '').toLowerCase();
       const category = (track.category || '').toLowerCase();
       const title = (track.title || '').toLowerCase();
 
@@ -456,7 +456,7 @@ export function AudioProvider({
       setCurrentIndex(idx);
       await loadTrack(track);
 
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      if (audioCtxRef.current?.state === 'suspended') {
         audioCtxRef.current.resume();
       }
 
@@ -500,7 +500,7 @@ export function AudioProvider({
 
     try {
       if (audio.paused) {
-        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        if (audioCtxRef.current?.state === 'suspended') {
           audioCtxRef.current.resume();
         }
         const playPromise = audio.play();
