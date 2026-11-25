@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes eq-bar {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.animate-eq-bar {
+  transform-origin: bottom;
+  animation: eq-bar 0.6s ease-in-out infinite;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.player-control {
+  position: relative;
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: rgb(168 162 158);
+  transition: background-color 150ms, color 150ms, transform 150ms;
+}
+
+.player-control:hover {
+  background-color: rgb(255 255 255 / 0.1);
+  color: white;
+}
+
+.player-control:active {
+  transform: scale(0.92);
+}
+
+.player-control span {
+  position: absolute;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.player-slider::-webkit-slider-thumb {
+  height: 0.9rem;
+  width: 0.9rem;
+  appearance: none;
+  border-radius: 9999px;
+  background: rgb(245 158 11);
+}
+
+.short-action {
+  display: flex;
+  min-width: 3.5rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.45);
+  transition: transform 150ms, color 150ms;
+}
+
+.short-action:hover {
+  color: rgb(252 211 77);
+  transform: scale(1.08);
+}
+
+.short-action:active {
+  transform: scale(0.94);
+}
+
+.player-slider::-moz-range-thumb {
+  height: 0.9rem;
+  width: 0.9rem;
+  border: 0;
+  border-radius: 9999px;
+  background: rgb(245 158 11);
+}
+
+/* Ocultar el badge flotante de Bolt */
+[class*="bolt-"],
+[id*="bolt-"],
+div:has(> a[href*="bolt.new"]) {
+  display: none !important;
+}
+/* Contorno luminoso en tarjeta seleccionada */
+@keyframes border-beam {
+  0% {
+    box-shadow: 0 0 15px rgba(60, 200, 245, 0.4), 0 0 30px rgba(60, 200, 245, 0.2), inset 0 0 10px rgba(60, 200, 245, 0.3);
+    border-color: rgba(60, 200, 245, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(60, 200, 245, 1), 0 0 70px rgba(60, 200, 245, 0.8), inset 0 0 20px rgba(60, 200, 245, 0.6);
+    border-color: rgba(60, 200, 245, 1);
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(60, 200, 245, 0.4), 0 0 30px rgba(60, 200, 245, 0.2), inset 0 0 10px rgba(60, 200, 245, 0.3);
+    border-color: rgba(60, 200, 245, 0.6);
+  }
+}
+
+.animate-border-glow {
+  border-width: 2px;
+  animation: border-beam 2s ease-in-out infinite;
+}
