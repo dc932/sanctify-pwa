@@ -30,7 +30,15 @@ const tracks: Track[] = [
 function wrapper({ children }: { children: ReactNode }) {
   return <AudioProvider queue={tracks}>{children}</AudioProvider>;
 }
+Object.defineProperty(window.HTMLMediaElement.prototype, "load", {
+  configurable: true,
+  value: vi.fn(),
+});
 
+Object.defineProperty(window.HTMLMediaElement.prototype, "play", {
+  configurable: true,
+  value: vi.fn().mockResolvedValue(undefined),
+});
 describe('AudioProvider', () => {
   it('loads a track and exposes queue controls', async () => {
     const { result } = renderHook(() => useAudio(), { wrapper });
