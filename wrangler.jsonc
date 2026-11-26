@@ -8,7 +8,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "run_worker_first": true,
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "none"
   },
   "vars": {
     "ALLOWED_ORIGINS": "https://sanctify-pwa.catholic-streaming.workers.dev",

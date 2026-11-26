@@ -146,6 +146,25 @@ function hasRequiredConfiguration(env: WorkerEnv): boolean {
   );
 }
 
+async function serveAssetOrSpaRoute(request: Request, env: WorkerEnv): Promise<Response> {
+  const assetResponse = await env.ASSETS.fetch(request);
+  if (
+    assetResponse.status !== 404 ||
+    !['GET', 'HEAD'].includes(request.method) ||
+    !/\btext\/html\b/i.test(request.headers.get('Accept') ?? '')
+  ) {
+    return assetResponse;
+  }
+
+  const pathname = new URL(request.url).pathname;
+  const lastPathSegment = pathname.slice(pathname.lastIndexOf('/') + 1);
+  if (pathname.startsWith('/assets/') || /\.[^/]+$/.test(lastPathSegment)) {
+    return assetResponse;
+  }
+
+  return env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
+}
+
 async function handlePresign(request: Request, env: WorkerEnv, headers: Headers): Promise<Response> {
   if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
     return jsonResponse({ error: 'Se requiere Content-Type application/json.' }, 415, headers);
@@ -306,7 +325,7 @@ export default {
   async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname !== '/api' && !url.pathname.startsWith('/api/')) {
-      return env.ASSETS.fetch(request);
+      return serveAssetOrSpaRoute(request, env);
     }
 
     const origin = getAllowedOrigin(request, env);

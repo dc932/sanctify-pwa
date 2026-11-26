@@ -65,6 +65,60 @@ describe('R2 upload Worker', () => {
     expect(assetFetch).toHaveBeenCalledWith(request);
   });
 
+  it('serves an SPA route from index.html only after the asset lookup misses', async () => {
+    const assetFetch = vi.fn(async (request: Request) =>
+      new URL(request.url).pathname === '/index.html'
+        ? new Response('<div id="root"></div>', {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          })
+        : new Response('Not found', { status: 404 })
+    );
+    const request = new Request(
+      'https://sanctify-pwa.catholic-streaming.workers.dev/creator/dashboard',
+      { headers: { Accept: 'text/html' } }
+    );
+
+    const response = await worker.fetch(request, createEnv(assetFetch));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/html');
+    expect(assetFetch.mock.calls.map(([assetRequest]) => new URL(assetRequest.url).pathname)).toEqual([
+      '/creator/dashboard',
+      '/index.html',
+    ]);
+  });
+
+  it('preserves the JavaScript response for an existing bundled asset', async () => {
+    const assetFetch = vi.fn(async () =>
+      new Response('console.log("app");', {
+        headers: { 'Content-Type': 'application/javascript; charset=utf-8' },
+      })
+    );
+    const request = new Request(
+      'https://sanctify-pwa.catholic-streaming.workers.dev/assets/index-abc123.js',
+      { headers: { Accept: '*/*' } }
+    );
+
+    const response = await worker.fetch(request, createEnv(assetFetch));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('javascript');
+    expect(assetFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not replace a missing JavaScript asset with the SPA document', async () => {
+    const assetFetch = vi.fn(async () => new Response('Not found', { status: 404 }));
+    const request = new Request(
+      'https://sanctify-pwa.catholic-streaming.workers.dev/assets/index-old.js',
+      { headers: { Accept: '*/*' } }
+    );
+
+    const response = await worker.fetch(request, createEnv(assetFetch));
+
+    expect(response.status).toBe(404);
+    expect(assetFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('does not send unknown API paths to the static asset binding', async () => {
     const assetFetch = vi.fn(async () => new Response('static asset'));
     const request = new Request(
