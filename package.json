@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:worker": "wrangler dev --port 8787",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -14,9 +15,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1164.0",
     "@hello-pangea/dnd": "^17.0.0",
     "@supabase/supabase-js": "^2.118.0",
+    "aws4fetch": "^1.0.20",
     "cropperjs": "^2.3.0",
     "framer-motion": "^14.9.0",
     "lucide-react": "^0.446.0",

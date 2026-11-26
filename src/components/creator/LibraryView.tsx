@@ -715,7 +715,12 @@ export default function LibraryView() {
                 <span className="truncate">
                   {editCoverName ? editCoverName : 'Cambiar imagen de portada (opcional)'}
                 </span>
-                <input type="file" accept="image/*" onChange={handleCoverChange} className="hidden" />
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.avif"
+                  onChange={handleCoverChange}
+                  className="hidden"
+                />
               </label>
             </div>
 
@@ -728,7 +733,12 @@ export default function LibraryView() {
                 <span className="truncate">
                   {editMediaName ? editMediaName : 'Seleccionar nuevo archivo (opcional)'}
                 </span>
-                <input type="file" onChange={handleMediaChange} className="hidden" />
+                <input
+                  type="file"
+                  accept=".mp3,.wav,.aac,.mp4,.pdf,.doc,.docx,.txt,.lrc,.jpg,.jpeg,.png,.webp,.gif,.avif"
+                  onChange={handleMediaChange}
+                  className="hidden"
+                />
               </label>
             </div>
 

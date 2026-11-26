@@ -492,7 +492,7 @@ export default function UploadView() {
                 )}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.avif"
                   onChange={(e) => {
                     const selected = e.target.files?.[0];
                     if (isValidUploadFile(selected)) {
@@ -827,7 +827,7 @@ export default function UploadView() {
                       </span>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept=".jpg,.jpeg,.png,.webp,.gif,.avif"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           if (isValidUploadFile(f)) {

@@ -16,9 +16,6 @@ jobs:
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-      VITE_R2_BUCKET_NAME: ${{ secrets.VITE_R2_BUCKET_NAME }}
-      VITE_R2_ENDPOINT: ${{ secrets.VITE_R2_ENDPOINT }}
-      VITE_R2_PUBLIC_URL: ${{ secrets.VITE_R2_PUBLIC_URL }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

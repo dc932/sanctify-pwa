@@ -1,70 +1,81 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { supabase } from './supabase';
 
-const endpoint = import.meta.env.VITE_R2_ENDPOINT;
-const accessKeyId = import.meta.env.VITE_R2_ACCESS_KEY_ID;
-const secretAccessKey = import.meta.env.VITE_R2_SECRET_ACCESS_KEY;
-const bucketName = import.meta.env.VITE_R2_BUCKET_NAME;
-
-if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName) {
-  console.warn(
-    'Faltan variables de entorno de Cloudflare R2 (VITE_R2_ENDPOINT, VITE_R2_ACCESS_KEY_ID, VITE_R2_SECRET_ACCESS_KEY, VITE_R2_BUCKET_NAME).'
-  );
+interface PresignedUpload {
+  uploadUrl: string;
+  publicUrl: string;
+  contentType: string;
 }
 
-// 1. Inicializar el cliente de Cloudflare R2 usando las credenciales del entorno
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint,
-  credentials: {
-    accessKeyId,
-    secretAccessKey,
-  },
-  requestChecksumCalculation: 'WHEN_REQUIRED',
-});
+const extensionByMimeType: Record<string, string> = {
+  'application/msword': 'doc',
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'audio/aac': 'aac',
+  'audio/mpeg': 'mp3',
+  'audio/wav': 'wav',
+  'image/avif': 'avif',
+  'image/gif': 'gif',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'text/plain': 'txt',
+  'video/mp4': 'mp4',
+};
 
-function generateUniqueId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
+function getUploadFileName(file: File | Blob): string {
+  if (file instanceof File && file.name) return file.name;
+
+  const extension = extensionByMimeType[file.type];
+  if (!extension) {
+    throw new Error('El archivo debe tener un nombre y una extensión permitida.');
   }
-  return Math.random().toString(36).substring(2, 10);
+  return `archivo.${extension}`;
 }
 
-/**
- * Función helper para subir archivos (audios, videos, PDFs o portadas) a Cloudflare R2.
- * Convierte el archivo a Uint8Array para evitar errores de ReadableStream (.getReader) en navegador.
- */
 export async function uploadToR2(file: File | Blob, folder: string = 'tracks'): Promise<string> {
-  if (!(file instanceof Blob)) {
-    throw new Error('El archivo proporcionado no es un File o Blob válido.');
+  if (!(file instanceof Blob) || file.size === 0) {
+    throw new Error('El archivo proporcionado no es válido o está vacío.');
   }
 
-  const originalName = file instanceof File && file.name ? file.name : 'archivo.bin';
-  const rawExt = originalName.includes('.') ? originalName.split('.').pop() : '';
-  const sanitizedExt = (rawExt || 'bin').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'bin';
-  const sanitizedFolder = folder.replace(/^\/+|\/+$/g, '') || 'tracks';
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+  if (sessionError || !session) {
+    throw new Error('La sesión ha expirado. Por favor, vuelve a iniciar sesión.');
+  }
 
-  const uniqueId = generateUniqueId();
-  const fileName = `${sanitizedFolder}/${Date.now()}_${uniqueId}.${sanitizedExt}`;
-
-  // Leer el archivo en memoria como Uint8Array para compatibilidad total con @aws-sdk/client-s3 en navegador
-  const arrayBuffer = await file.arrayBuffer();
-  const bodyBytes = new Uint8Array(arrayBuffer);
-
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: fileName,
-    Body: bodyBytes,
-    ContentType: file.type || 'application/octet-stream',
-    ContentLength: bodyBytes.byteLength,
+  const presignResponse = await fetch('/api/uploads/presign', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fileName: getUploadFileName(file),
+      folder,
+      size: file.size,
+    }),
   });
+  const presignedUpload = (await presignResponse.json()) as Partial<PresignedUpload> & {
+    error?: string;
+  };
 
-  await r2Client.send(command);
+  if (!presignResponse.ok) {
+    throw new Error(presignedUpload.error || `No se pudo preparar la subida (HTTP ${presignResponse.status}).`);
+  }
+  if (!presignedUpload.uploadUrl || !presignedUpload.publicUrl || !presignedUpload.contentType) {
+    throw new Error('El servicio de subida devolvió una respuesta incompleta.');
+  }
 
-  const rawPublicUrl =
-    import.meta.env.VITE_R2_PUBLIC_URL ||
-    'https://pub-695900c697294aa480c3ee497955f125.r2.dev';
+  const uploadResponse = await fetch(presignedUpload.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': presignedUpload.contentType },
+    body: file,
+  });
+  if (!uploadResponse.ok) {
+    throw new Error(`R2 rechazó el archivo (HTTP ${uploadResponse.status}).`);
+  }
 
-  const publicBaseUrl = rawPublicUrl.replace(/\/+$/, '');
-
-  return `${publicBaseUrl}/${fileName}`;
+  return presignedUpload.publicUrl;
 }

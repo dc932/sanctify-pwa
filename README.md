@@ -29,7 +29,7 @@ Plataforma de audio y contenido espiritual construida con React, Vite, Supabase 
 | Animaciones | Framer Motion |
 | Iconos | Lucide React |
 | Base de datos + Auth | Supabase (PostgreSQL + RLS) |
-| Almacenamiento de archivos | Cloudflare R2 (vía AWS SDK S3) |
+| Almacenamiento de archivos | Cloudflare R2 (URLs prefirmadas emitidas por Worker) |
 | Audio | Wavesurfer.js + HTMLAudioElement |
 | Gráficas | Recharts |
 | Drag & Drop | @hello-pangea/dd |
@@ -51,11 +51,14 @@ Navegador (cliente)
    │     ├── 4 funciones SECURITY DEFINER (admin)
    │     └── Auth (email/password, sesión persistente)
    │
+   ├── Cloudflare Worker
+   │     └── Valida sesión y aprobación del creador; firma URLs temporales
+   │
    └── Cloudflare R2
-         └── Subida directa desde el cliente (audio, portadas)
+         └── Recibe la subida directa del navegador mediante la URL prefirmada
 ```
 
-La app habla directamente con Supabase desde el navegador usando la `anon key`. Toda la seguridad se aplica mediante políticas RLS a nivel de fila y permisos a nivel de columna. Las operaciones administrativas (aprobar creadores, publicar contenido, agradecer donaciones) se ejecutan mediante funciones `SECURITY DEFINER` que verifican `profiles.role = 'admin'`.
+La app habla directamente con Supabase desde el navegador usando la `anon key`. Toda la seguridad de datos se aplica mediante políticas RLS a nivel de fila y permisos a nivel de columna. Las operaciones administrativas (aprobar creadores, publicar contenido, agradecer donaciones) se ejecutan mediante funciones `SECURITY DEFINER` que verifican `profiles.role = 'admin'`. El Worker valida la sesión de Supabase y la aprobación del creador antes de emitir URLs de subida; las demás rutas se sirven mediante el binding `ASSETS` de Wrangler, con fallback SPA.
 
 ## Estructura de carpetas
 
@@ -71,7 +74,7 @@ sanctify/
 │   ├── main.tsx                # Punto de entrada + registro del service worker PWA
 │   ├── App.tsx                 # Layout principal, catálogo y navegación entre vistas
 │   ├── supabase.ts             # Cliente Supabase (sesión persistente)
-│   ├── r2.ts                   # Cliente Cloudflare R2 (subida de archivos)
+│   ├── r2.ts                   # Solicita URL prefirmada y sube archivos a R2
 │   ├── index.css               # Estilos globales + Tailwind
 │   ├── types/audio.ts          # Tipos: Track, TrackCategory, AudioState
 │   ├── lib/
@@ -178,7 +181,9 @@ Todas verifican `profiles.role = 'admin'` antes de ejecutar.
 
 ## Almacenamiento de archivos (Cloudflare R2)
 
-La subida de audio y portadas se realiza directamente desde el navegador a Cloudflare R2 usando el AWS SDK S3. La función `uploadToR2` en `src/r2.ts` genera un nombre único, sube el archivo y devuelve la URL pública que se guarda en `creator_content`.
+La función `uploadToR2` en `src/r2.ts` solicita una URL prefirmada a `POST /api/uploads/presign` y sube el archivo directamente desde el navegador a Cloudflare R2. El Worker genera una clave aleatoria dentro de una carpeta asociada al usuario y devuelve la URL pública para guardarla en `creator_content`. Las credenciales S3 permanecen como secretos del Worker y nunca se incluyen en el bundle público.
+
+La subida individual con `PUT` admite archivos de hasta 5 GiB. Para archivos mayores se necesitaría implementar una ruta de carga multipart.
 
 No hay un bucket de Supabase Storage para contenido; R2 es la única capa de almacenamiento de archivos.
 
@@ -191,9 +196,43 @@ La app usa `vite-plugin-pwa` con Workbox:
 - **Audio**: `CacheFirst` con soporte para solicitudes parciales (reproducción offline).
 - **Service worker**: se registra automáticamente y se actualiza en segundo plano.
 
-## Variables de entorno
+## Variables de entorno y subidas a R2
 
-La app no necesita variables de entorno para compilarse. No añadas credenciales privadas de R2 a variables `VITE_*`: Vite las incrusta en el JavaScript que recibe cualquier visitante. La configuración actual de la subida desde navegador debe migrarse a un endpoint de servidor/Worker antes de habilitar credenciales de R2.
+El navegador usa `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para la app. Las credenciales S3 de R2 nunca deben usar el prefijo `VITE_`: Vite las incorporaría al JavaScript público.
+
+Las cargas solicitan una URL prefirmada a `POST /api/uploads/presign`. El Worker valida el token de Supabase y que `creator_profiles.status` sea `approved`, luego firma un `PUT` de cinco minutos. El navegador envía el archivo directamente a R2.
+
+Configura las variables de runtime en **Workers & Pages > sanctify-pwa > Settings > Variables and Secrets**. `R2_BUCKET_NAME` y `ALLOWED_ORIGINS` de producción están definidos en `wrangler.jsonc`; para local, `.dev.vars` los reemplaza:
+
+| Variable | Uso |
+| --- | --- |
+| `SUPABASE_URL` | URL del proyecto Supabase |
+| `SUPABASE_ANON_KEY` | Clave pública anon de Supabase; nunca uses la service-role |
+| `R2_ENDPOINT` | Endpoint S3 del account de Cloudflare R2 |
+| `R2_BUCKET_NAME` | Nombre del bucket, `sanctify-media` |
+| `R2_PUBLIC_BASE_URL` | Dominio público base de los objetos |
+| `R2_ACCESS_KEY_ID` | Secreto de servidor para firmar las URLs |
+| `R2_SECRET_ACCESS_KEY` | Secreto de servidor para firmar las URLs |
+| `ALLOWED_ORIGINS` | En producción: `https://sanctify-pwa.catholic-streaming.workers.dev` |
+
+`R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` deben configurarse como **secrets** del Worker, no como variables de build ni secretos `VITE_*`. La allowlist del Worker en producción contiene solo el origen `workers.dev`; en local, `.dev.vars` permite además `http://localhost:5173`.
+
+### Desarrollo local del Worker
+
+1. Copia `.dev.vars.example` como `.dev.vars` y completa los valores locales. `.dev.vars` está ignorado por Git.
+2. Ejecuta `npm run build` para crear `dist/`.
+3. En una terminal, ejecuta `npm run dev:worker`; en otra, `npm run dev`. Vite reenvía `/api/*` al Worker local en `127.0.0.1:8787`.
+
+### CORS del bucket
+
+`r2-cors.json` permite `PUT` desde producción y `http://localhost:5173`, y `GET`/`HEAD` para conservar el acceso web a los objetos. Aplica la regla con Wrangler después de revisar la configuración existente:
+
+```bash
+npx wrangler r2 bucket cors list sanctify-media
+npx wrangler r2 bucket cors set sanctify-media --file r2-cors.json
+```
+
+`cors set` reemplaza la política completa del bucket; combina primero cualquier otra regla u origen que todavía necesites.
 
 ## Instalación local
 
@@ -268,20 +307,27 @@ npm run dev
 
 ## Despliegue con GitHub Actions
 
-El archivo `.github/workflows/deploy.yml` valida cada Pull Request y publica la app en Cloudflare Workers al hacer push a `main`. Wrangler sirve `dist/` como SPA con el nombre `sanctify-pwa`, que corresponde a `https://sanctify-pwa.diego-soriano932.workers.dev`.
+El archivo `.github/workflows/deploy.yml` valida cada Pull Request y publica la app en Cloudflare Workers al hacer push a `main`. Wrangler sirve `dist/` como SPA y ejecuta el endpoint `/api/*` en el Worker `sanctify-pwa`, disponible en `https://sanctify-pwa.catholic-streaming.workers.dev`.
 
 ### Configuración inicial
 
 1. En Cloudflare, obtén el **Account ID** desde **Workers & Pages** y crea un API Token con permisos para editar Workers.
 2. En GitHub, añade `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en **Settings > Secrets and variables > Actions**.
-3. Confirma que el subdominio `diego-soriano932.workers.dev` está habilitado en esa cuenta y que el Worker `sanctify-pwa` puede desplegarse allí.
-4. Añade `https://sanctify-pwa.diego-soriano932.workers.dev` a las URLs permitidas de redirección de autenticación en Supabase.
+3. Confirma que el subdominio `catholic-streaming.workers.dev` está habilitado en esa cuenta y que el Worker `sanctify-pwa` puede desplegarse allí.
+4. Añade `https://sanctify-pwa.catholic-streaming.workers.dev` a las URLs permitidas de redirección de autenticación en Supabase.
 
 Los Pull Requests ejecutan typecheck, pruebas y build sin desplegar. Los cambios en `main` hacen esas mismas verificaciones y, si pasan, despliegan a `workers.dev`. También se puede ejecutar `npm run deploy` localmente después de autenticar Wrangler con Cloudflare.
 
-### Credenciales de R2
+### Secretos R2 para producción
 
-El pipeline no inyecta claves de R2 en el build. Las variables `VITE_*` se incluyen en el JavaScript público del navegador; por tanto, no configures `VITE_R2_ACCESS_KEY_ID` ni `VITE_R2_SECRET_ACCESS_KEY` como secretos de compilación. La subida directa a R2 requiere mover esa operación a un endpoint de servidor/Worker antes de usar credenciales privadas.
+Configura `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` como secrets del Worker en el Dashboard de Cloudflare o con:
+
+```bash
+npx wrangler secret put R2_ACCESS_KEY_ID
+npx wrangler secret put R2_SECRET_ACCESS_KEY
+```
+
+Los otros valores de runtime se configuran como variables del Worker. El workflow de GitHub ya no pasa variables `VITE_R2_*` al build.
 
 ## Licencia
 

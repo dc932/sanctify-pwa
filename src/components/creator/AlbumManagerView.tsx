@@ -330,7 +330,7 @@ export default function AlbumManagerView() {
                 </span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.avif"
                   onChange={(e) => handleFileChange(e, false)}
                   className="hidden"
                 />
@@ -389,7 +389,7 @@ export default function AlbumManagerView() {
                 </span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.avif"
                   onChange={(e) => handleFileChange(e, true)}
                   className="hidden"
                 />
