@@ -11,7 +11,7 @@
     "not_found_handling": "none"
   },
   "vars": {
-    "ALLOWED_ORIGINS": "https://sanctify-pwa.catholic-streaming.workers.dev",
+    "ALLOWED_ORIGINS": "https://sanctify-pwa.catholic-streaming.workers.dev,http://localhost:5173",
     "R2_BUCKET_NAME": "sanctify-media"
   }
 }
