@@ -782,11 +782,46 @@ export default function UploadView() {
             </div>
           )}
 
+          <div className="rounded-2xl border border-zinc-800 bg-[#121214] p-5 space-y-3">
+            <div>
+              <h3 className="font-bold text-white">Portada del contenido (opcional)</h3>
+              <p className="mt-1 text-xs text-zinc-500">JPG, PNG, WebP, GIF o AVIF</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800">
+                <img
+                  src={thumbnailPreview}
+                  alt="Vista previa de la portada"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 py-3 text-xs font-medium text-zinc-400 hover:border-zinc-500 hover:text-white">
+                <Upload className="h-4 w-4" />
+                <span className="truncate max-w-[220px]">
+                  {thumbnailFile ? thumbnailFile.name : 'Seleccionar imagen de portada'}
+                </span>
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.avif"
+                  onChange={(e) => {
+                    const selected = e.target.files?.[0];
+                    if (isValidUploadFile(selected)) {
+                      setThumbnailFile(selected);
+                      setThumbnailPreview(URL.createObjectURL(selected));
+                    }
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+
           {/* SECCIÓN DE LECTURA / DOC */}
           {uploadType === 'lecture' && (
             <div className="rounded-2xl border border-zinc-800 bg-[#121214] p-5 space-y-4">
               <h3 className="font-bold text-white">Archivos y Contenido para la Lectura</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 space-y-2">
                   <span className="text-xs font-semibold text-zinc-300">Documento PDF / Archivo</span>
                   <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 py-3 text-xs font-medium text-zinc-400 hover:border-zinc-500 hover:text-white">
@@ -806,40 +841,6 @@ export default function UploadView() {
                       className="hidden"
                     />
                   </label>
-                </div>
-
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 space-y-2">
-                  <span className="text-xs font-semibold text-zinc-300">
-                    Imagen de Portada (Artwork)
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800">
-                      <img
-                        src={thumbnailPreview}
-                        alt="Miniatura"
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-700 py-3 text-xs font-medium text-zinc-400 hover:border-zinc-500 hover:text-white">
-                      <Upload className="h-4 w-4" />
-                      <span className="truncate max-w-[130px]">
-                        {thumbnailFile ? thumbnailFile.name : 'Cambiar portada'}
-                      </span>
-                      <input
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.webp,.gif,.avif"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (isValidUploadFile(f)) {
-                            setThumbnailFile(f);
-                            setThumbnailPreview(URL.createObjectURL(f));
-                          }
-                          e.target.value = '';
-                        }}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
                 </div>
               </div>
 
